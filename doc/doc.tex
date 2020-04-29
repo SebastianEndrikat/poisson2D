@@ -1,0 +1,225 @@
+\documentclass{article}
+%\usepackage[australian]{babel}
+
+%\usepackage[printonlyused]{acronym}
+\usepackage{acro}
+\usepackage{siunitx} % for \SI{1}{\metre}, \SI{0}{\percent}, \si{\kilo\gram\metre\per\square\second}, ...
+\DeclareSIUnit\utau{u_\uptau}
+\DeclareSIUnit\honutau{h/u_\uptau}
+\usepackage{amsmath} % e.g. for $\text{}$
+\newcommand\numberthis{\refstepcounter{equation}\tag{\theequation}} % for numbering in  the align* environment
+\usepackage[noabbrev,nameinlink]{cleveref}      	 % reference object types automatically
+%	% parenthesis for sub equations:
+%	\labelcrefformat{subequation}{#2(#1)#3}
+%	\labelcrefrangeformat{subequation}{#3(#1)#4 to #5(#2)#6}
+\usepackage{listings}
+\usepackage[toc,page]{appendix}
+%\usepackage{flafter} % floats only after first mention
+%\usepackage[section]{placeins} % keep floats in their section
+\usepackage{placeins}
+\usepackage{caption}
+\usepackage{units} % for nicefrac
+\usepackage{bm} % bold math mode \bm{}
+\usepackage{wrapfig}
+\usepackage{upgreek} % \uptau 
+\usepackage{pdflscape} % landscape
+\usepackage{fancyhdr} 
+\usepackage{multirow,bigdelim}
+\usepackage{MnSymbol} % symbols (square, triangle, .. in caption or text) see mnsymbol documentation (pdf online) for available symbols
+\usepackage[export]{adjustbox}% http://ctan.org/pkg/adjustbox to valign on top. loads graphicx
+\usepackage{enumitem} % enumerate options
+\usepackage[round]{natbib} % cite with author name
+\usepackage{soul} % highlight text
+
+%\usepackage{draftwatermark}
+%\SetWatermarkText{DRAFT \today}
+%\SetWatermarkScale{4}
+%\usepackage[printwatermark]{xwatermark}
+%\newwatermark[allpages,color=red!50,angle=45,scale=3,xpos=0,ypos=0]{DRAFT \today}
+%\usepackage{eso-pic}% http://ctan.org/pkg/eso-pic
+%\AddToShipoutPictureBG{% Add picture to background of every page
+%	\AtPageLowerLeft{%
+%		\raisebox{50pt}{\makebox[\paperwidth]{\begin{minipage}{21cm}\centering
+%					Draft [Revision 269] 30-06-2012 at 07:41:41
+%					\copyright\ Me, Myself and I
+%		\end{minipage}}}%
+%	}
+%}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,calc} % for drawing stuff
+\usetikzlibrary{patterns}
+
+\def\centerarc[#1](#2)(#3:#4:#5)% Syntax: [draw options] (center) (initial angle:final angle:radius)
+{ \draw[#1] ($(#2)+({#5*cos(#3)},{#5*sin(#3)})$) arc (#3:#4:#5); }
+
+\def\centerarcfill[#1](#2)(#3:#4:#5)% Syntax: [draw options] (center) (initial angle:final angle:radius)
+{ \fill[#1] ($(#2)+({#5*cos(#3)},{#5*sin(#3)})$) arc (#3:#4:#5); }
+
+\usetikzlibrary{arrows.meta,bending,matrix,positioning} % to draw on matrix
+
+\newlength\figureheight
+\newlength\figurewidth
+\setlength\figurewidth{0.39\textwidth} % global, potentially change within float, will be locally
+\setlength\figureheight{0.8\figurewidth}
+\tikzset{every picture/.style={font issue=\footnotesize},
+	font issue/.style={execute at begin picture={#1\selectfont}}} % tikz font size
+\usepackage{pgfplots}					% needed for tikz images
+\pgfplotsset{compat=newest}
+\pgfplotsset{plot coordinates/math parser=false}
+
+% externalize tikz (save as eps):
+% also requires to run: pdflatex --shell-escape main.tex, with that flag
+% convert the *.pdf to *.eps using pdftops
+% for the next compilation of this doc, it probably uses the pdf, not the eps
+% for JFM: change code in document to include eps rather than the tikz
+%\usetikzlibrary{external}
+%\tikzexternalize
+\usepackage{epstopdf}
+
+\DeclareRobustCommand\sampleline[1]{%
+	\tikz\draw[#1] (0,0) (0,\the\dimexpr\fontdimen22\textfont2\relax)
+	-- (1em,\the\dimexpr\fontdimen22\textfont2\relax);% change the length (1em or so) globally
+}
+% examples:
+%\sampleline{}, $\rho$;
+%\sampleline{dashed}, $u$;
+%\sampleline{dotted}, $v$;
+%\sampleline{dash pattern=on .7em off .2em on .2em off .2em}, $w$;
+%\sampleline{dash pattern=on .7em off .2em on .05em off .2em}, $T$.
+
+
+% itemize inside a table:
+\usepackage{booktabs}% http://ctan.org/pkg/booktabs
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+\usepackage{tabularx}
+
+
+
+
+
+% \ac{} or \acfp{} in text
+\DeclareAcronym{DNS}{
+	short = {DNS},
+	long = {Direct Numerical Simulation},
+	short-plural = , 
+	long-plural = {}
+}
+\DeclareAcronym{LES}{
+	short = {LES},
+	long = {Large-Eddy Simulation},
+	short-plural = , 
+	long-plural = {}
+}
+
+\DeclareAcronym{TKE}{
+	short = {TKE},
+	long = {turbulent kinetic energy},
+	short-plural = , 
+	long-plural = {}
+}
+
+% format of \today
+\usepackage[yyyymmdd]{datetime}
+\renewcommand{\dateseparator}{}
+
+\usepackage[top=3cm,left=2cm,right=2cm,bottom=1.5cm,headheight=1cm]{geometry}
+
+\setlength{\parindent}{0pt}	
+\begin{document}
+	
+	\pagestyle{plain}
+%	\pagestyle{fancy}
+%	\rhead{poisson 2D\\ Version: \today}
+%	\cfoot{\thepage}
+	
+\begin{center}
+	\Large
+	\textsc{Grid-free 2D Poisson equation solver}
+	
+	\large
+	Version: \today
+\end{center}
+
+These notes are based on 
+\emph{Grid free method for solving the Poisson equation} by J. Kuhnert and S. Tiwari (2001), Berichte des Fraunhofer ITWM, Nr. 25.
+
+
+We want to solve
+\begin{equation}
+\nabla^2 f = s
+\end{equation}
+in a 2D domain $(y,z)$
+with possible boundary conditions $f=a$ and $\mathrm{d}f/\mathrm{d}y=b$ or $\mathrm{d}f/\mathrm{d}z=b$.
+Dirichlet boundaries are passed as additional points at which the solution is not found but instead given.
+For each other point, an array of booleans determines whether and which Neumann BC they have.
+Periodic boundaries can currently be prescribed along $y$ for a fixed distance.
+
+For each point $p$, we find the smallest possible number of neighbour points $i\in \{1,k \}$ and consider the Taylor series approximation
+\begin{equation}
+f_i = f_p 
++ \Delta y \frac{\mathrm{d}f}{\mathrm{d}y}
++ \Delta z \frac{\mathrm{d}f}{\mathrm{d}z}
++ \frac{\Delta y^2}{2} \frac{\mathrm{d}^2f}{\mathrm{d}y^2}
++ \frac{\Delta z^2}{2} \frac{\mathrm{d}^2f}{\mathrm{d}z^2}
++ \Delta y \Delta z \frac{\mathrm{d}^2f}{\mathrm{d}y \mathrm{d}z},
+\end{equation}
+where $\Delta y = y_i - y_p$ and $\Delta z = z_i - z_p$. 
+Further,
+\begin{equation}
+\frac{\mathrm{d}^2f}{\mathrm{d}y^2} +  \frac{\mathrm{d}^2f}{\mathrm{d}z^2} = s_p
+\end{equation}
+and potentially
+\begin{equation}
+\frac{\mathrm{d}f}{\mathrm{d}y} = b_y \quad \mathrm{and/or} \quad \frac{\mathrm{d}f}{\mathrm{d}z}=b_z.
+\end{equation}
+
+
+We combine the system into
+\begin{equation}
+\begin{bmatrix}
+s_p \\ 
+b      \\ 
+f_i      \\ 
+\vdots
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 & 0        & 0        & 1            & 1            & 0 \\
+0 &  \{0, 1\}        & \{0, 1\}        & 0            & 0            & 0 \\
+1 & \Delta y_i & \Delta z_i & \Delta y_i^2/2 & \Delta z_i^2/2 & \Delta y_i \Delta z_i \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \\
+\end{bmatrix}
+\begin{bmatrix}
+f_p \\ 
+\mathrm{d}f/\mathrm{d}y      \\ 
+\mathrm{d}f/\mathrm{d}z      \\ 
+\mathrm{d}^2f/\mathrm{d}y^2  \\ 
+\mathrm{d}^2f/\mathrm{d}z^2  \\
+\mathrm{d}^2f/(\mathrm{d}y\mathrm{d}z)
+\end{bmatrix}
+\end{equation}
+or $K=A O$.
+The $(k+2) \times (k+2)$ weight matrix is
+\begin{equation}
+W=
+\begin{bmatrix}
+1 & 0 & 0 & 0 & 0 & \hdots \\
+0 & 1 & 0 & 0 & 0 & \hdots \\
+0 & 0 & w_i & 0 & 0 & \hdots \\
+0 & 0 & 0 & \ddots & 0 & \hdots
+\end{bmatrix},
+\end{equation}
+with weights $w_i=\varepsilon/(\Delta y^2 + \Delta z^2 + \varepsilon)$, where $\varepsilon=\alpha \Delta y^2 \Delta z^2$ measures a typical distance to neighbours using the closest point of all $k$ and a suitable $\alpha$ (for example $\alpha=1$).
+
+We update the field values $f$ using the first entry in $O$ after solving
+\begin{equation}
+O=\left[ \left( A^T W A\right)^{-1} A^T W \right] K 
+\end{equation}
+at each point $p$.
+
+
+
+
+
+\end{document}
