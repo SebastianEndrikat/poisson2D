@@ -17,7 +17,7 @@ import numpy as np
 #import matplotlib.pyplot as plt
 #import os, errno
 import sys
-#from scipy.spatial import cKDTree as KDTree
+from scipy.spatial import cKDTree as KDTree
 import scipy
 import time
 
@@ -119,7 +119,7 @@ def getFirstDerivs(y,z,f,yPeriodic=0.0,K=31,R=None,verbose=True):
         
 #    plt.plot(y,z,'.g')
     
-    tree = scipy.spatial.cKDTree( zip( y, z ) )  # build the tree
+    tree = KDTree( zip( y, z ) )  # build the tree
     # query tree and get distances and integers of K points near every point:
     queries = tree.query(zip(y,z) , K) 
     KInds = queries[1] # the integers, distances are in [0]. matrix of Nf by K indices
@@ -278,7 +278,7 @@ def solvePoisson(y,z,s,dyzero,dzzero,yb,zb,fb,f0=None,
         # so now f=f[ghostMap] updates the ghost values if f[:Nf] have changed
     
     t0=time.time()
-    tree = scipy.spatial.cKDTree( zip( y, z ) )  # build the tree
+    tree = KDTree( zip( y, z ) )  # build the tree
     # query tree and get distances and integers of K points near every point:
     KDists,KInds = tree.query(zip(y,z) , K) 
     t1=time.time()
