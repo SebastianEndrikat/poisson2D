@@ -51,11 +51,12 @@ def getAnW_poisson(x,y,x0,y0):
     K=len(x)
     A = np.zeros((K+2,6))
     W = np.zeros((K+2,K+2))
-    alpha=1. # weighting of neighbors
-#    alpha=0.1
+#    alpha=1. # weighting of neighbors
+    alpha=0.1
     dx=x[0]-x[1] # distance between the two closest points
     dy=y[0]-y[1] # a measure of the local grid size
-    eps=alpha*((dx*dx)+(dy*dy))
+#    eps=alpha*((dx*dx)+(dy*dy))
+    d1=(dx**2. + dy**2.)**0.5
     for i in range(K):
         dx = x[i]-x0
         dy = y[i]-y0
@@ -65,7 +66,9 @@ def getAnW_poisson(x,y,x0,y0):
         A[i+2,3] = 0.5*dx**2. 
         A[i+2,4] = 0.5*dy**2.
         A[i+2,5] = dx*dy
-        W[i+2,i+2] = eps/((dx*dx)+(dy*dy)+eps)
+#        W[i+2,i+2] = eps/((dx*dx)+(dy*dy)+eps)
+        di=(dx**2. + dy**2.)**0.5
+        W[i+2,i+2] = (alpha+1.)/(alpha+(di/d1)**2.)
     A[0,3]=1.0 # d2udy2 ... first entry of known-vector is the poisson rhs, known[0]=s
     A[0,4]=1.0 # d2udz2
 #    A[1,1]=1.0 # in the event of dudy= known[1]
@@ -203,7 +206,7 @@ def iteratePoisson(f,knownConst,R,KInds,ghostMap,Nf,K,alpha,maxit,TOL,verbose):
         
 #        res=np.mean((f-fold)**2.)
         fmax=np.max(np.abs(f))
-        res=np.abs(fmax-fmax0)
+        res=np.abs(fmax-fmax0)/fmax
         if verbose:
             if np.mod(ll,100)==0:
                 printReplace('ll=%i, residual = %.6e' %(ll,res))
@@ -290,26 +293,36 @@ def solvePoisson(y,z,s,dyzero,dzzero,yb,zb,fb,f0=None,
         t0=time.time()
         R=np.zeros((Nf,6,K+2))
         maxmaxK=0
+        nUsedNeighbors=np.zeros(Nf)
         for ip in range(Nf): # only over the points for which I wanna find the deriv
             I=KInds[ip,:] # indeces of the K neighbor points
             A,W=getAnW_poisson(y[I],z[I],y[ip],z[ip])
             if dyzero[ip]: # zero-gradient BC
-                A[1,1]=1.0 # gradient is whatever we put in the known-array
+                A[1,1]=1.0 # gradient is whatever we put in the known-array 
+                A[0,3]=0.
+                A[0,4]=0. # we define a gradient instead of a rhs
             if dzzero[ip]: # zero-gradient BC
                 A[1,2]=1.0 
-            A,W,Keff=minimizeWeights(A,W,y[ip],z[ip]) # Keff invludes the two constraints, not just neighbors!
+                A[0,3]=0.
+                A[0,4]=0. # we define a gradient instead of a rhs
+            A,W,Keff=minimizeWeights(A,W,y[ip],z[ip]) # Keff includes the two constraints, not just neighbors!
             maxmaxK=np.max([maxmaxK,Keff])
+            nUsedNeighbors[ip]=Keff-2 # two constraints
             R[ip,:,:]=scipy.matmul(scipy.matmul(scipy.linalg.inv(scipy.matmul(scipy.matmul(A.T,W),A)),A.T),W)
         t1=time.time()
         if verbose:
-            print('Got R in %.8f seconds. Highest number of neighbors used anywhere: %i' %((t1-t0),maxmaxK) )
+            print('Got R in %.8f seconds.' %(t1-t0) )
+            print('Highest number of neighbors used anywhere: %i' %np.max(nUsedNeighbors) )
+            print('Lowest  number of neighbors used anywhere: %i' %np.min(nUsedNeighbors) )
+            print('Average number of neighbors used: %f' %np.mean(nUsedNeighbors) )
     
     # assemble the part of the known vectors that uses the constant source term
     knownConst=np.zeros((Nf,K+2,1))
     for ip in range(Nf): # only over the points for which I wanna find the deriv
         I=KInds[ip,:] # indeces of the K neighbor points
-        knownConst[ip,0,0]= s[ip]
-        knownConst[ip,1,0]= 0.0 # gradient in either y or z
+        if (not dyzero[ip]) and (not dzzero[ip]): # define RHS for this point instead of gradient BC
+            knownConst[ip,0,0]= s[ip]
+        knownConst[ip,1,0]= 0.0 # gradient in z
     
     
     t0=time.time()
@@ -329,15 +342,15 @@ def solvePoisson(y,z,s,dyzero,dzzero,yb,zb,fb,f0=None,
         
         d2fdy2=np.squeeze(out[:,3])
         d2fdz2=np.squeeze(out[:,4])
-        err=np.mean((d2fdy2+d2fdz2-s)**2.)
-        print('Average squared error between LHS and RHS = %.6e' %err )
+        err=np.mean((d2fdy2+d2fdz2-s)**2.)**0.5
+        print('Average error between LHS and RHS = %.6e' %err )
         
         if np.sum(dyzero)>0:
             sel,=np.where(dyzero==True)
-            print('Average dfdy=0 = %.6e' %np.mean(np.squeeze(out[:,1])[sel]) )
+            print('Average dfdy=0 = %.6e' %np.mean((np.squeeze(out[:,1])[sel])**2.)**0.5 )
         if np.sum(dzzero)>0:
             sel,=np.where(dzzero==True)
-            print('Average dfdz=0 = %.6e' %np.mean(np.squeeze(out[:,2])[sel]) )
+            print('Average dfdz=0 = %.6e' %np.mean((np.squeeze(out[:,2])[sel])**2.)**0.5 )
     
     
     return f[:Nf], R # could also return gradients

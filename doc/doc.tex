@@ -31,97 +31,11 @@
 \usepackage[round]{natbib} % cite with author name
 \usepackage{soul} % highlight text
 
-%\usepackage{draftwatermark}
-%\SetWatermarkText{DRAFT \today}
-%\SetWatermarkScale{4}
-%\usepackage[printwatermark]{xwatermark}
-%\newwatermark[allpages,color=red!50,angle=45,scale=3,xpos=0,ypos=0]{DRAFT \today}
-%\usepackage{eso-pic}% http://ctan.org/pkg/eso-pic
-%\AddToShipoutPictureBG{% Add picture to background of every page
-%	\AtPageLowerLeft{%
-%		\raisebox{50pt}{\makebox[\paperwidth]{\begin{minipage}{21cm}\centering
-%					Draft [Revision 269] 30-06-2012 at 07:41:41
-%					\copyright\ Me, Myself and I
-%		\end{minipage}}}%
-%	}
-%}
-
-\usepackage{tikz}
-\usetikzlibrary{shapes.geometric,calc} % for drawing stuff
-\usetikzlibrary{patterns}
-
-\def\centerarc[#1](#2)(#3:#4:#5)% Syntax: [draw options] (center) (initial angle:final angle:radius)
-{ \draw[#1] ($(#2)+({#5*cos(#3)},{#5*sin(#3)})$) arc (#3:#4:#5); }
-
-\def\centerarcfill[#1](#2)(#3:#4:#5)% Syntax: [draw options] (center) (initial angle:final angle:radius)
-{ \fill[#1] ($(#2)+({#5*cos(#3)},{#5*sin(#3)})$) arc (#3:#4:#5); }
-
-\usetikzlibrary{arrows.meta,bending,matrix,positioning} % to draw on matrix
-
-\newlength\figureheight
-\newlength\figurewidth
-\setlength\figurewidth{0.39\textwidth} % global, potentially change within float, will be locally
-\setlength\figureheight{0.8\figurewidth}
-\tikzset{every picture/.style={font issue=\footnotesize},
-	font issue/.style={execute at begin picture={#1\selectfont}}} % tikz font size
-\usepackage{pgfplots}					% needed for tikz images
-\pgfplotsset{compat=newest}
-\pgfplotsset{plot coordinates/math parser=false}
-
-% externalize tikz (save as eps):
-% also requires to run: pdflatex --shell-escape main.tex, with that flag
-% convert the *.pdf to *.eps using pdftops
-% for the next compilation of this doc, it probably uses the pdf, not the eps
-% for JFM: change code in document to include eps rather than the tikz
-%\usetikzlibrary{external}
-%\tikzexternalize
-\usepackage{epstopdf}
-
-\DeclareRobustCommand\sampleline[1]{%
-	\tikz\draw[#1] (0,0) (0,\the\dimexpr\fontdimen22\textfont2\relax)
-	-- (1em,\the\dimexpr\fontdimen22\textfont2\relax);% change the length (1em or so) globally
-}
-% examples:
-%\sampleline{}, $\rho$;
-%\sampleline{dashed}, $u$;
-%\sampleline{dotted}, $v$;
-%\sampleline{dash pattern=on .7em off .2em on .2em off .2em}, $w$;
-%\sampleline{dash pattern=on .7em off .2em on .05em off .2em}, $T$.
-
-
-% itemize inside a table:
-\usepackage{booktabs}% http://ctan.org/pkg/booktabs
-\newcommand{\tabitem}{~~\llap{\textbullet}~~}
-\usepackage{tabularx}
 
 
 
 
 
-% \ac{} or \acfp{} in text
-\DeclareAcronym{DNS}{
-	short = {DNS},
-	long = {Direct Numerical Simulation},
-	short-plural = , 
-	long-plural = {}
-}
-\DeclareAcronym{LES}{
-	short = {LES},
-	long = {Large-Eddy Simulation},
-	short-plural = , 
-	long-plural = {}
-}
-
-\DeclareAcronym{TKE}{
-	short = {TKE},
-	long = {turbulent kinetic energy},
-	short-plural = , 
-	long-plural = {}
-}
-
-% format of \today
-\usepackage[yyyymmdd]{datetime}
-\renewcommand{\dateseparator}{}
 
 \usepackage[top=3cm,left=2cm,right=2cm,bottom=1.5cm,headheight=1cm]{geometry}
 
@@ -133,91 +47,149 @@
 %	\rhead{poisson 2D\\ Version: \today}
 %	\cfoot{\thepage}
 	
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \begin{center}
 	\Large
-	\textsc{Grid-free 2D Poisson equation solver}
+	\textsc{Weighted least squares Poisson solver}
 	
 	\large
 	Version: \today
 \end{center}
 
-These notes are based on 
-\emph{Grid free method for solving the Poisson equation} by J. Kuhnert and S. Tiwari (2001), Berichte des Fraunhofer ITWM, Nr. 25.
-
-
-We want to solve
-\begin{equation}
-\nabla^2 f = s
+This solver for the Poisson equation 
+\begin{equation} \label{eq:poissonTheEquation}
+\nabla^2 f(y,z) = s(y,z)
 \end{equation}
-in a 2D domain $(y,z)$
-with possible boundary conditions $f=a$ and $\mathrm{d}f/\mathrm{d}y=b$ or $\mathrm{d}f/\mathrm{d}z=b$.
-Dirichlet boundaries are passed as additional points at which the solution is not found but instead given.
-For each other point, an array of booleans determines whether and which Neumann BC they have.
-Periodic boundaries can currently be prescribed along $y$ for a fixed distance.
+on unstructured meshes is a 2D implementation of the 3D algorithm described in detail by
 
-For each point $p$, we find the smallest possible number of neighbour points $i\in \{1,k \}$ and consider the Taylor series approximation
+\begin{center}
+	\begin{minipage}{0.8\linewidth}
+		\emph{Grid free method for solving the Poisson equation} by J. Kuhnert and S. Tiwari (2001), Berichte des Fraunhofer ITWM, Nr. 25.
+	\end{minipage}
+\end{center}
+
+We want to solve (\ref{eq:poissonTheEquation})
+in a 2D domain $(y,z)$,
+where $s(y,z)$ is a potentially spatially varying source term that does not depend on $f$. 
+Boundary conditions are either Dirichlet or Neumann.
+Dirichlet boundaries are passed as additional points at which the solution is not found but instead given,
+which allows for an accurate description of the boundary, that can significantly affect the magnitude of $f$.
+The Neumann boundary condition is applied to the subset of the regular points that forms the respective boundary.
+Periodic boundaries can be prescribed along $y$ for a fixed distance by duplicating relevant points in the domain.
+
+
+For each point $p$ in the domain, we find the smallest possible number of neighbour points $i\in \{1,2,\ldots,k \}$ and consider the Taylor series
 \begin{equation}
 f_i = f_p 
-+ \Delta y \frac{\mathrm{d}f}{\mathrm{d}y}
-+ \Delta z \frac{\mathrm{d}f}{\mathrm{d}z}
-+ \frac{\Delta y^2}{2} \frac{\mathrm{d}^2f}{\mathrm{d}y^2}
-+ \frac{\Delta z^2}{2} \frac{\mathrm{d}^2f}{\mathrm{d}z^2}
-+ \Delta y \Delta z \frac{\mathrm{d}^2f}{\mathrm{d}y \mathrm{d}z},
++ \Delta y_i \left. \frac{\partial f}{\partial y} \right|_p
++ \Delta z_i \left. \frac{\partial f}{\partial z} \right|_p
++ \frac{(\Delta y_i)^2}{2} \left. \frac{\partial ^2f}{\partial y^2} \right|_p
++ \frac{(\Delta z_i)^2}{2} \left. \frac{\partial ^2f}{\partial z^2} \right|_p
++ \Delta y_i \Delta z_i \left. \frac{\partial ^2f}{\partial y \partial z} \right|_p
++ e_i,
 \end{equation}
-where $\Delta y = y_i - y_p$ and $\Delta z = z_i - z_p$. 
+where $e_i$ is an error term and $\Delta y_i = y_i - y_p$, $\Delta z_i = z_i - z_p$. 
 Further,
-\begin{equation}
-\frac{\mathrm{d}^2f}{\mathrm{d}y^2} +  \frac{\mathrm{d}^2f}{\mathrm{d}z^2} = s_p
+\begin{equation} \label{eq:poissonSolverRHSconditionAtp}
+\left. \frac{\partial ^2f}{\partial y^2} \right|_p +  
+\left. \frac{\partial ^2f}{\partial z^2} \right|_p = s_p
 \end{equation}
-and potentially
+or potentially instead
 \begin{equation}
-\frac{\mathrm{d}f}{\mathrm{d}y} = b_y \quad \mathrm{and/or} \quad \frac{\mathrm{d}f}{\mathrm{d}z}=b_z.
+\left. \frac{\partial f}{\partial n} \right|_p = b,
 \end{equation}
-
-
+if $p$ is on a boundary with normal vector $n$ that is scaled to satisfy $|n|=1$.
 We combine the system into
-\begin{equation}
+\begin{equation} \label{eq:poissonSystem}
 \begin{bmatrix}
 s_p \\ 
 b      \\ 
-f_i      \\ 
-\vdots
+f_1      \\ 
+f_2      \\ 
+\vdots \\
+f_k      
 \end{bmatrix}
 =
 \begin{bmatrix}
-0 & 0        & 0        & 1            & 1            & 0 \\
-0 &  \{0, 1\}        & \{0, 1\}        & 0            & 0            & 0 \\
-1 & \Delta y_i & \Delta z_i & \Delta y_i^2/2 & \Delta z_i^2/2 & \Delta y_i \Delta z_i \\
+0 & 0        & 0        & \{0, 1\}            & \{0, 1\}            & 0 \\
+0 &  \{0, n_y\}        & \{0, n_z\}        & 0            & 0            & 0 \\
+1 & \Delta y_1 & \Delta z_1 & (\Delta y_1)^2/2 & (\Delta z_1)^2/2 & \Delta y_1 \Delta z_1 \\
+1 & \Delta y_2 & \Delta z_2 & (\Delta y_2)^2/2 & (\Delta z_2)^2/2 & \Delta y_2 \Delta z_2 \\
 \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \\
+1 & \Delta y_k & \Delta z_k & (\Delta y_k)^2/2 & (\Delta z_k)^2/2 & \Delta y_k \Delta z_k 
 \end{bmatrix}
 \begin{bmatrix}
 f_p \\ 
-\mathrm{d}f/\mathrm{d}y      \\ 
-\mathrm{d}f/\mathrm{d}z      \\ 
-\mathrm{d}^2f/\mathrm{d}y^2  \\ 
-\mathrm{d}^2f/\mathrm{d}z^2  \\
-\mathrm{d}^2f/(\mathrm{d}y\mathrm{d}z)
+\left. \partial f/\partial y     \right|_p  \\ 
+\left. \partial f/\partial z     \right|_p  \\ 
+\left. \partial ^2f/\partial y^2 \right|_p  \\ 
+\left. \partial ^2f/\partial z^2 \right|_p  \\
+\left. \partial ^2f/(\partial y\partial z) \right|_p 
+\end{bmatrix}
++
+\begin{bmatrix}
+e_{\mathrm{rhs}} \\
+e_b \\
+e_1 \\
+e_2 \\
+\vdots \\
+e_i
 \end{bmatrix}
 \end{equation}
-or $K=A O$.
-The $(k+2) \times (k+2)$ weight matrix is
-\begin{equation}
+or $K=A R + E$.
+For instance, a zero-gradient boundary 
+$\partial f / \partial z = 0$ at the top of the domain is prescribed via $b=0$, $n_y=0$, $n_z=-1$ with only zeros in the first row of $A$ and $s_p=0$.
+At other points $p$, the second row of $A$ contains only zeros as the first row accounts for (\ref{eq:poissonSolverRHSconditionAtp}).
+We want to minimise the sum of the weighted squared errors $J=E^T W E$, where
+the $(k+2) \times (k+2)$ weight matrix is
+\begin{equation} \label{eq:poissonWmatrix}
 W=
 \begin{bmatrix}
-1 & 0 & 0 & 0 & 0 & \hdots \\
-0 & 1 & 0 & 0 & 0 & \hdots \\
-0 & 0 & w_i & 0 & 0 & \hdots \\
-0 & 0 & 0 & \ddots & 0 & \hdots
-\end{bmatrix},
+1 & 0 & 0   & 0   & \hdots & 0 \\
+0 & 1 & 0   & 0   & \hdots & 0 \\
+0 & 0 & w_1 & 0   & \hdots & 0 \\
+0 & 0 & 0   & w_2 & \hdots & 0 \\
+\vdots & \vdots & \vdots   & \vdots   & \ddots & \vdots \\
+0 & 0 & 0   & 0   & \hdots & w_k
+\end{bmatrix}.
 \end{equation}
-with weights $w_i=\varepsilon/(\Delta y^2 + \Delta z^2 + \varepsilon)$, where $\varepsilon=\alpha \Delta y^2 \Delta z^2$ measures a typical distance to neighbours using the closest point of all $k$ and a suitable $\alpha$ (for example $\alpha=1$).
+The weights on the diagonal
+$w_i= (\alpha+1)/ \left( \alpha + (\Delta_i/\Delta_1)^2 \right)$ are inverse proportional to the 
+distance between $p$ and the neighbour point, $\Delta_i = \sqrt{\Delta y_i^2 + \Delta z_i^2}$.
+Weights are assigned relative to that of the closest point (denoted here by the index $i=1$), so that $w_1=1$ and $w_{i>1} \in [0,1]$ are similar to the first two weights on the diagonal in (\ref{eq:poissonWmatrix}) 
+regardless of the mesh dimensions.
+The weighting parameter $\alpha$ can be used to adjust spatial averaging.
+For $\alpha = 0$, only the closest points are effectively used to find the value at $p$,
+as the weights are given by the inverse of the squared distance, relative to the that of the closest neighbour point.
+The weights of neighbours farther from $p$ increase with $\alpha$ and for $\alpha \rightarrow \infty$, all neighbour points are weighted equally, which promotes spatial averaging.
+We chose $\alpha=0.1$ to include all points necessary to solve for $f_p$, while at the same time avoiding spatial averaging as much as possible. 
 
-We update the field values $f$ using the first entry in $O$ after solving
-\begin{equation}
-O=\left[ \left( A^T W A\right)^{-1} A^T W \right] K 
+
+By minimising $J=(AR-K)^T W (AR-K)$, we find
+\begin{equation} \label{eq:poissonFinalSolve}
+R=
+\begin{bmatrix}
+f_p \\ 
+\left. \partial f/\partial y     \right|_p  \\ 
+\left. \partial f/\partial z     \right|_p  \\ 
+\left. \partial ^2f/\partial y^2 \right|_p  \\ 
+\left. \partial ^2f/\partial z^2 \right|_p  \\
+\left. \partial ^2f/(\partial y\partial z) \right|_p 
+\end{bmatrix}
+=
+\left[ \left( A^T W A\right)^{-1} A^T W \right] K 
 \end{equation}
-at each point $p$.
-
+at each point $p$, 
+update the field values $f_p^{\tau+1}=rR_1^\tau + (1-r)f_p^\tau$ and iterate $\tau = 1,2,\ldots$ 
+following the Jacobi method
+with optional relaxation $r>0$
+until the field $f$ is converged.
+For convergence, we require the relative change of the maximum norm $||f||_\infty$ between iterations to fall below e.g.\ $r \times 10^{-12}$ and then verify that $e_\mathrm{rhs}$ and $e_b$ from (\ref{eq:poissonSystem}) are small.
+Note that the term in square brackets on the right-hand side of (\ref{eq:poissonFinalSolve}) need only be calculated once for each point $p$ of a given mesh.
+The ideal number of neighbours $k \gtrsim 6$ used at a given point $p$ is the smallest that nevertheless makes $\left( A^T W A\right)$ invertible.
 
 
 
